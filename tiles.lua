@@ -29,3 +29,12 @@ function drawGears(gears)
         end
     end
 end
+
+
+function drawPlayer(player)
+    local isoX, isoY = gridToIso(player.x, player.y)
+
+    love.graphics.setColor(0, 1, 0)
+    love.graphics.circle('fill', isoX, isoY, TILE_SIZE / 2, 8)
+    love.graphics.setColor(1, 1, 1)
+end

@@ -17,6 +17,23 @@ M.lPlatform = {
     }
 }
 
+
+M.lPlatformC = {
+    type = "platform",
+    mutable = true,
+    action = "rotate",
+    direction = 'cw',
+    color = {1,0.6,0.3},
+    rotating = false,
+    tiles = {
+        {0,0},
+        {1,0},
+        {2,0},
+        {0,1},
+        {0,2}
+    }
+}
+
 M.sPlatformX = {
     type = "platform",
     mutable = true,
@@ -65,15 +82,24 @@ M.mirrorPlatform = {
     color = {0.7,0.8,1},
 }
 
+
+M.staticPlatform = {
+    type = 'platform',
+    mutable = false,
+    action = nil,
+    color = {0.5, 0.5, 0.5},
+    tiles = {
+        {0, 0}
+    }
+}
+
 function M.placePlatformsOnGrid(platform)
     for _, t in ipairs(platform.tiles) do
         local gx = platform.x + t[1]
         local gy = platform.y + t[2]
 
-       if grid[gy] and grid[gy][gx] then
-            grid[gy][gx] = { parent = platform }
-        end
-
+        if not grid[gy] then grid[gy] = {} end
+        grid[gy][gx] = { parent = platform } -- or just true if you don't need parent
     end
 end
 
@@ -238,23 +264,24 @@ end
 
 -- call this whenever mirror rotates or platform moves
 function M.updateMirrorConnections(mirror, platforms)
-
-    local x = mirror.x
-    local y = mirror.y
-
-    local left  = {x-1, y}
-    local up    = {x, y-1}
+    local x, y = mirror.x, mirror.y
+    local positions = {
+        {x-1, y},   -- left
+        {x, y-1},   -- up
+        {x-1, y-1}, -- up-left (L corner)
+    }
 
     mirror.links = {}
 
-    for _,p in ipairs(platforms) do
-        for _,t in ipairs(p.tiles) do
-            local tx = p.x + t[1]
-            local ty = p.y + t[2]
+    for _, p in ipairs(platforms) do
+        for _, t in ipairs(p.tiles) do
+            local tx, ty = p.x + t[1], p.y + t[2]
 
-            if (tx == left[1] and ty == left[2]) or
-               (tx == up[1] and ty == up[2]) then
-                table.insert(mirror.links, p)
+            for _, pos in ipairs(positions) do
+                if tx == pos[1] and ty == pos[2] then
+                    table.insert(mirror.links, p)
+                    break
+                end
             end
         end
     end

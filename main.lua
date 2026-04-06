@@ -2,6 +2,7 @@ require("grid")
 require('tiles')
 
 local P = require('platforms')
+local G = require('graph')
 
 GRID_SIZE = 15
 TILE_SIZE = 30
@@ -9,19 +10,37 @@ TRANSLATE_OFFSEX = 450
 TRANSLATE_OFFSEY = 120
 ROTATE_SPEED = 6
 
+PLAYER = {
+    x = 9,
+    y = 4,
+    moving = false,
+    path = {},
+    speed = 5
+}
 
 local selectedPlatform = nil
 
+-- local platforms = {
+--     P.instantiatePlatform(P.sPlatformX, 9, 4),
+--     -- P.instantiatePlatform(P.sPlatformY, 9, 4),
+--     P.instantiatePlatform(P.lPlatform, 3, 4),
+--     P.instantiatePlatform(P.mirrorPlatform, 6, 4),
+-- }
+
 local platforms = {
-    P.instantiatePlatform(P.sPlatformX, 9, 4),
-    -- P.instantiatePlatform(P.sPlatformY, 9, 4),
-    P.instantiatePlatform(P.lPlatform, 3, 4),
-    P.instantiatePlatform(P.mirrorPlatform, 6, 4),
+    -- P.instantiatePlatform(P.lPlatformC, 9, 9),
+    P.instantiatePlatform(P.lPlatform, 9, 9),
+    P.instantiatePlatform(P.sPlatformY, 9, 6),
+    P.instantiatePlatform(P.sPlatformX, 11, 5),
+    P.instantiatePlatform(P.sPlatformY, 9, 12),
+    P.instantiatePlatform(P.staticPlatform, 8, 4),
+    P.instantiatePlatform(P.staticPlatform, 9, 4),
+    P.instantiatePlatform(P.staticPlatform, 9, 15),
 }
 
+
 local gears = {
-    {x = 6, y = 4, collected = false},
-    {x = 8, y = 5, collected = false}
+    {x = 9, y = 15, collected = false},
 }
 
 
@@ -34,7 +53,6 @@ function love.load()
     for _,p in ipairs(platforms) do
         P.placePlatformsOnGrid(p)
     end
-
 end
 
 
@@ -69,6 +87,28 @@ function love.update(dt)
             end
         end
     end
+
+
+    if PLAYER.moving and #PLAYER.path > 0 then
+
+        local target = PLAYER.path[1]
+
+        PLAYER.x = target[1]
+        PLAYER.y = target[2]
+
+        table.remove(PLAYER.path, 1)
+
+        if #PLAYER.path == 0 then
+            PLAYER.moving = false
+
+            -- collect gear
+            for _, g in ipairs(gears) do
+                if g.x == PLAYER.x and g.y == PLAYER.y then
+                    g.collected = true
+                end
+            end
+        end
+    end
 end
 
 
@@ -86,11 +126,25 @@ function love.draw()
     end
 
     drawGears(gears)
+    drawPlayer(PLAYER)
+
+
+
+    for y = 1, GRID_SIZE do
+        for x = 1, GRID_SIZE do
+            if grid[y][x] then
+                local isoX, isoY = gridToIso(x, y)
+                love.graphics.setColor(0, 0.7, 1, 0.5) -- platform tile color
+                love.graphics.rectangle("fill", isoX-5, isoY-5, 10, 10)
+            end
+        end
+    end
 end
 
 
 function love.mousereleased(mx, my, button)
     selectedPlatform = nil
+    G.tryMoveToGear(gears, PLAYER)
 end
 
 function love.mousepressed(mx, my, button)
@@ -164,6 +218,7 @@ function love.mousemoved(mx, my, dx, dy)
             else break end
         end
         selectedPlatform.y = currY
+
     end
 
     -- update grid

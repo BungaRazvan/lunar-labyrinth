@@ -5,9 +5,7 @@ function initGrid(GRID_SIZE)
         grid[y] = {}
 
         for x = 1, GRID_SIZE do
-            grid[y][x] = {
-                type = "empty"
-            }
+            grid[y][x] = nil
         end
     end
 end
