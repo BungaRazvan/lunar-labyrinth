@@ -6,6 +6,7 @@ M.lPlatform = {
     type = "platform",
     mutable = true,
     action = "rotate",
+    direction = 'ccw',
     color = {1,0.6,0.3},
     rotating = false,
     tiles = {
@@ -99,8 +100,59 @@ function M.placePlatformsOnGrid(platform)
         local gy = platform.y + t[2]
 
         if not grid[gy] then grid[gy] = {} end
-        grid[gy][gx] = { parent = platform } -- or just true if you don't need parent
+        grid[gy][gx] = {
+            x = gx,
+            y = gy,
+            parent = platform,
+            type = t.type or "normal",
+            mirrorType = t.mirrorType or nil
+         }
     end
+end
+
+function mirrorTileAcross(tileX, tileY, mirror)
+    local mx, my = mirror.x, mirror.y
+    if mirror.mirrorType == "/" then
+        local dx = tileX - mx
+        local dy = tileY - my
+        return mx - dy, my - dx  -- reflection over /
+    else
+        local dx = tileX - mx
+        local dy = tileY - my
+        return mx + dy, my + dx  -- reflection over \
+    end
+end
+
+
+local function getReflectedPosition(mirror, platform)
+    local reflectedTiles = {}
+    for _, t in ipairs(platform.tiles) do
+        local tx, ty = platform.x + t[1], platform.y + t[2]
+        local rx = mirror.x - (tx - mirror.x)
+        local ry = mirror.y - (ty - mirror.y)
+        table.insert(reflectedTiles, {rx, ry})
+    end
+    return reflectedTiles
+end
+
+
+function M.drawMirrorReflections(mirror)
+    love.graphics.setColor(1, 1, 1, 0.3) -- semi-transparent
+    for _, linked in ipairs(mirror.links) do
+        local reflected = getReflectedPosition(mirror, linked)
+        for _, t in ipairs(reflected) do
+            local isoX, isoY = gridToIso(t[1], t[2])
+            local hw, hh = TILE_SIZE, TILE_SIZE / 2
+            love.graphics.polygon(
+                "fill",
+                isoX, isoY,
+                isoX + hw, isoY + hh,
+                isoX, isoY + hh*2,
+                isoX - hw, isoY + hh
+            )
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function M.drawPlatform(platform)
@@ -265,23 +317,15 @@ end
 -- call this whenever mirror rotates or platform moves
 function M.updateMirrorConnections(mirror, platforms)
     local x, y = mirror.x, mirror.y
-    local positions = {
-        {x-1, y},   -- left
-        {x, y-1},   -- up
-        {x-1, y-1}, -- up-left (L corner)
-    }
-
     mirror.links = {}
 
+    -- check all 8 neighboring tiles
     for _, p in ipairs(platforms) do
         for _, t in ipairs(p.tiles) do
             local tx, ty = p.x + t[1], p.y + t[2]
-
-            for _, pos in ipairs(positions) do
-                if tx == pos[1] and ty == pos[2] then
-                    table.insert(mirror.links, p)
-                    break
-                end
+            if math.abs(tx - x) <= 1 and math.abs(ty - y) <= 1 then
+                table.insert(mirror.links, p)
+                break
             end
         end
     end

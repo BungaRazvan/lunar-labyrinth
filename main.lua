@@ -6,8 +6,8 @@ local G = require('graph')
 
 GRID_SIZE = 15
 TILE_SIZE = 30
-TRANSLATE_OFFSEX = 450
-TRANSLATE_OFFSEY = 120
+TRANSLATE_OFFSETX = 450
+TRANSLATE_OFFSETY = 120
 ROTATE_SPEED = 6
 
 PLAYER = {
@@ -27,20 +27,35 @@ local selectedPlatform = nil
 --     P.instantiatePlatform(P.mirrorPlatform, 6, 4),
 -- }
 
+-- local platforms = {
+--     -- P.instantiatePlatform(P.lPlatformC, 9, 9),
+--     P.instantiatePlatform(P.lPlatform, 9, 9),
+--     P.instantiatePlatform(P.sPlatformY, 9, 6),
+--     P.instantiatePlatform(P.sPlatformX, 11, 5),
+--     P.instantiatePlatform(P.sPlatformY, 9, 12),
+--     P.instantiatePlatform(P.staticPlatform, 8, 4),
+--     P.instantiatePlatform(P.staticPlatform, 9, 4),
+--     P.instantiatePlatform(P.staticPlatform, 9, 15),
+-- }
+
+
+
 local platforms = {
-    -- P.instantiatePlatform(P.lPlatformC, 9, 9),
-    P.instantiatePlatform(P.lPlatform, 9, 9),
-    P.instantiatePlatform(P.sPlatformY, 9, 6),
+    -- normal platforms
+    -- P.instantiatePlatform(P.lPlatform, 4, 7),
+    P.instantiatePlatform(P.sPlatformY, 8, 5),
     P.instantiatePlatform(P.sPlatformX, 11, 5),
-    P.instantiatePlatform(P.sPlatformY, 9, 12),
+    
+    -- static platforms
     P.instantiatePlatform(P.staticPlatform, 8, 4),
     P.instantiatePlatform(P.staticPlatform, 9, 4),
-    P.instantiatePlatform(P.staticPlatform, 9, 15),
+    P.instantiatePlatform(P.staticPlatform, 4, 10),
+    P.instantiatePlatform(P.mirrorPlatform, 5, 5),
 }
 
 
 local gears = {
-    {x = 9, y = 15, collected = false},
+    {x = 4, y = 10, collected = false},
 }
 
 
@@ -113,23 +128,42 @@ end
 
 
 function love.draw()
-    love.graphics.translate(TRANSLATE_OFFSEX, TRANSLATE_OFFSEY)
+    love.graphics.translate(TRANSLATE_OFFSETX, TRANSLATE_OFFSETY)
 
+    local font = love.graphics.getFont()
+    local offsetX, offsetY = 0, -font:getHeight()/2
     for y = 1, GRID_SIZE do
         for x = 1, GRID_SIZE do
             drawTile(x, y)
+
+            local isoX, isoY = gridToIso(x, y)
+
+            -- Draw coordinates only on the outer rows/columns
+            love.graphics.setColor(1, 1, 1) -- white
+
+            if y == 1 then
+                -- top row: draw X coordinate
+                love.graphics.print(x, isoX - 5, isoY + offsetY)
+            end
+
+            if x == 1 then
+                -- left column: draw Y coordinate
+                love.graphics.print(y, isoX - 20, isoY - 5)
+            end
         end
     end
 
+
     for _, p in ipairs(platforms) do
         P.drawPlatform(p)
+
+        if p.type == 'mirror' then
+            P.drawMirrorReflections(p)
+        end
     end
 
-    drawGears(gears)
+    drawGear(gears)
     drawPlayer(PLAYER)
-
-
-
     for y = 1, GRID_SIZE do
         for x = 1, GRID_SIZE do
             if grid[y][x] then
@@ -149,8 +183,8 @@ end
 
 function love.mousepressed(mx, my, button)
 
-    mx = mx - TRANSLATE_OFFSEX
-    my = my - TRANSLATE_OFFSEY
+    mx = mx - TRANSLATE_OFFSETX
+    my = my - TRANSLATE_OFFSETY
 
     for i = #platforms, 1, -1 do
         local p = platforms[i]
@@ -188,8 +222,8 @@ function love.mousemoved(mx, my, dx, dy)
     if not selectedPlatform.mutable then return end
     if selectedPlatform.action ~= "drag" then return end
 
-    mx = mx - TRANSLATE_OFFSEX
-    my = my - TRANSLATE_OFFSEY
+    mx = mx - TRANSLATE_OFFSETX
+    my = my - TRANSLATE_OFFSETY
 
     local gx, gy = isoToGrid(mx, my)
     local currX, currY = selectedPlatform.x, selectedPlatform.y
@@ -226,8 +260,14 @@ function love.mousemoved(mx, my, dx, dy)
     for _, p in ipairs(platforms) do
         P.placePlatformsOnGrid(p)
 
-        if p.mirror then
+        if p.type == 'mirror' then
+            
             P.updateMirrorConnections(p, platforms)
+
+            print("Mirror at", p.x, p.y, "links to:")
+            for i, linked in ipairs(p.links) do
+                print("   Platform at", linked.x, linked.y)
+            end
         end
     end
 end

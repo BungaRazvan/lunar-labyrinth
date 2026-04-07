@@ -19,13 +19,14 @@ function drawTile(x,y)
 end
 
 
-function drawGears(gears)
+function drawGear(gears)
     for _, g in ipairs(gears) do
         if not g.collected then
             local isoX, isoY = gridToIso(g.x, g.y)
 
             love.graphics.setColor(1, 0.8, 0)
             love.graphics.circle("fill", isoX, isoY + TILE_SIZE / 2, 6)
+            return
         end
     end
 end
